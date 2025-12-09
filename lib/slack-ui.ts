@@ -461,44 +461,44 @@ export function generateRetroSummary(
     (item) => item.category === "question"
   );
 
-  let summary = "# Retrospective Summary\n\n";
+  let summary = "*Retrospective Summary*\n\n";
   summary += `_Completed on ${new Date().toLocaleDateString()}_\n\n`;
 
   // Good items
-  summary += `## ${CATEGORY_EMOJI.good} What went well\n\n`;
+  summary += `*${CATEGORY_EMOJI.good} What went well*\n\n`;
   if (goodItems.length === 0) {
     summary += "_No items_\n\n";
   } else {
     goodItems.forEach((item) => {
-      summary += `- **${item.user_name}:** ${item.content}\n`;
+      summary += `• *${item.user_name}:* ${item.content}\n`;
     });
     summary += "\n";
   }
 
   // Bad items
-  summary += `## ${CATEGORY_EMOJI.bad} What could be improved\n\n`;
+  summary += `*${CATEGORY_EMOJI.bad} What could be improved*\n\n`;
   if (badItems.length === 0) {
     summary += "_No items_\n\n";
   } else {
     badItems.forEach((item) => {
-      summary += `- **${item.user_name}:** ${item.content}\n`;
+      summary += `• *${item.user_name}:* ${item.content}\n`;
     });
     summary += "\n";
   }
 
   // Question items
-  summary += `## ${CATEGORY_EMOJI.question} Questions / Discussion topics\n\n`;
+  summary += `*${CATEGORY_EMOJI.question} Questions / Discussion topics*\n\n`;
   if (questionItems.length === 0) {
     summary += "_No items_\n\n";
   } else {
     questionItems.forEach((item) => {
-      summary += `- **${item.user_name}:** ${item.content}\n`;
+      summary += `• *${item.user_name}:* ${item.content}\n`;
     });
     summary += "\n";
   }
 
   // Action items
-  summary += `## 🎯 Action Items\n\n`;
+  summary += `*🎯 Action Items*\n\n`;
   if (actionItems.length === 0) {
     summary += "_No action items_\n\n";
   } else {
@@ -506,17 +506,17 @@ export function generateRetroSummary(
     const outstandingItems = actionItems.filter((item) => !item.completed);
 
     if (outstandingItems.length > 0) {
-      summary += "### Outstanding\n\n";
+      summary += "*Outstanding:*\n";
       outstandingItems.forEach((item) => {
-        summary += `- [ ] **${item.responsible_user_name}:** ${item.content}\n`;
+        summary += `• ☐ *${item.responsible_user_name}:* ${item.content}\n`;
       });
       summary += "\n";
     }
 
     if (completedItems.length > 0) {
-      summary += "### Completed\n\n";
+      summary += "*Completed:*\n";
       completedItems.forEach((item) => {
-        summary += `- [x] **${item.responsible_user_name}:** ${item.content}\n`;
+        summary += `• ☑ *${item.responsible_user_name}:* ${item.content}\n`;
       });
       summary += "\n";
     }
