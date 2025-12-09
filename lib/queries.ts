@@ -35,32 +35,61 @@ export async function getInstallation(
 export async function getActiveRetro(
   teamId: string
 ): Promise<Retrospective | null> {
-  const result = await sql`
-    SELECT * FROM retrospectives
-    WHERE team_id = ${teamId} AND status = 'active'
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
-  return result[0] as Retrospective | null;
+  try {
+    console.log(`[getActiveRetro] Querying for team ${teamId}`);
+    console.log(`[getActiveRetro] DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
+    const result = await sql`
+      SELECT * FROM retrospectives
+      WHERE team_id = ${teamId} AND status = 'active'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    console.log(`[getActiveRetro] Query returned ${result.length} results`);
+    return result[0] as Retrospective | null;
+  } catch (error) {
+    console.error(`[getActiveRetro] Database query error:`, error);
+    if (error instanceof Error) {
+      console.error(`[getActiveRetro] Error name: ${error.name}`);
+      console.error(`[getActiveRetro] Error message: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function createRetro(teamId: string): Promise<Retrospective> {
-  const result = await sql`
-    INSERT INTO retrospectives (team_id, status)
-    VALUES (${teamId}, 'active')
-    RETURNING *
-  `;
-  return result[0] as Retrospective;
+  try {
+    console.log(`[createRetro] Creating new retro for team ${teamId}`);
+    const result = await sql`
+      INSERT INTO retrospectives (team_id, status)
+      VALUES (${teamId}, 'active')
+      RETURNING *
+    `;
+    console.log(`[createRetro] Successfully created retro:`, result[0]);
+    return result[0] as Retrospective;
+  } catch (error) {
+    console.error(`[createRetro] Database insert error:`, error);
+    throw error;
+  }
 }
 
 export async function getOrCreateActiveRetro(
   teamId: string
 ): Promise<Retrospective> {
-  const activeRetro = await getActiveRetro(teamId);
-  if (activeRetro) {
-    return activeRetro;
+  try {
+    console.log(`[getOrCreateActiveRetro] Looking for active retro for team ${teamId}`);
+    const activeRetro = await getActiveRetro(teamId);
+    if (activeRetro) {
+      console.log(`[getOrCreateActiveRetro] Found existing retro:`, activeRetro.id);
+      return activeRetro;
+    }
+    console.log(`[getOrCreateActiveRetro] No active retro found, creating new one`);
+    const newRetro = await createRetro(teamId);
+    console.log(`[getOrCreateActiveRetro] Created new retro:`, newRetro.id);
+    return newRetro;
+  } catch (error) {
+    console.error(`[getOrCreateActiveRetro] Error:`, error);
+    throw error;
   }
-  return createRetro(teamId);
 }
 
 export async function finishRetro(
