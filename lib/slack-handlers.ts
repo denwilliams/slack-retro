@@ -41,31 +41,48 @@ function getSlackClient() {
 
 async function refreshHomeView(userId: string, teamId: string) {
   try {
+    console.log(`[refreshHomeView] Starting for userId=${userId}, teamId=${teamId}`);
+
     const retro = await getOrCreateActiveRetro(teamId);
+    console.log(`[refreshHomeView] Got retro:`, retro);
+
     const discussionItems = await getDiscussionItems(retro.id);
+    console.log(`[refreshHomeView] Got ${discussionItems.length} discussion items`);
+
     const actionItems = await getActionItems(retro.id);
+    console.log(`[refreshHomeView] Got ${actionItems.length} action items`);
 
     const view = buildHomeView(discussionItems, actionItems, userId);
+    console.log(`[refreshHomeView] Built view with ${view.blocks.length} blocks`);
 
-    await getSlackClient().views.publish({
+    const result = await getSlackClient().views.publish({
       user_id: userId,
       view: view as any,
     });
+    console.log(`[refreshHomeView] Successfully published view:`, result.ok);
   } catch (error) {
-    console.error("Error refreshing home view:", error);
+    console.error("[refreshHomeView] Error refreshing home view:", error);
+    if (error instanceof Error) {
+      console.error("[refreshHomeView] Error message:", error.message);
+      console.error("[refreshHomeView] Error stack:", error.stack);
+    }
   }
 }
 
 export async function processSlackEvent(payload: any) {
   try {
+    console.log("[processSlackEvent] Received event:", payload.type);
+
     // Handle different event types
     if (payload.type === "event_callback") {
       const event = payload.event;
+      console.log("[processSlackEvent] Event callback type:", event.type);
 
       // Handle app_home_opened event
       if (event.type === "app_home_opened") {
         const userId = event.user;
         const teamId = payload.team_id;
+        console.log(`[processSlackEvent] app_home_opened for userId=${userId}, teamId=${teamId}`);
         await refreshHomeView(userId, teamId);
       }
     }
