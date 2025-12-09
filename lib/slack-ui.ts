@@ -217,7 +217,7 @@ export function buildHomeView(
   }
 
   return {
-    type: "home",
+    type: "home" as const,
     blocks,
   };
 }
