@@ -33,7 +33,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const payload = JSON.parse(body);
+    // Parse payload based on content type
+    // Event subscriptions come as JSON, interactive components as form-encoded
+    const contentType = request.headers.get("content-type") || "";
+    let payload;
+
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      // Interactive components (buttons, modals, etc.) send form-encoded data
+      const params = new URLSearchParams(body);
+      const payloadStr = params.get("payload");
+      if (!payloadStr) {
+        throw new Error("No payload field in form data");
+      }
+      payload = JSON.parse(payloadStr);
+    } else {
+      // Event subscriptions send JSON directly
+      payload = JSON.parse(body);
+    }
 
     // Handle URL verification challenge
     if (payload.type === "url_verification") {
