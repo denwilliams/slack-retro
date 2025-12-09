@@ -24,10 +24,12 @@ import {
 } from "./slack-ui";
 
 function getClient() {
-  if (!process.env.SLACK_BOT_TOKEN) {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) {
     throw new Error("SLACK_BOT_TOKEN environment variable is not set");
   }
-  return new WebClient(process.env.SLACK_BOT_TOKEN);
+  console.log(`[getClient] SLACK_BOT_TOKEN exists: true, starts with: ${token.substring(0, 8)}...`);
+  return new WebClient(token);
 }
 
 let client: WebClient | null = null;
