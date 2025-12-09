@@ -13,6 +13,8 @@ import {
   deleteAllDiscussionItems,
   getPastRetros,
   getAllActionItems,
+  createRetro,
+  migrateIncompleteActionItems,
 } from "./queries";
 import {
   buildHomeView,
@@ -126,8 +128,13 @@ export async function processSlackEvent(payload: any) {
 
         const summary = generateRetroSummary(discussionItems, actionItems);
 
+        // Finish the current retro and clean up discussion items
         await finishRetro(retro.id, summary);
         await deleteAllDiscussionItems(retro.id);
+
+        // Create a new retro and migrate incomplete action items
+        const newRetro = await createRetro(teamId);
+        await migrateIncompleteActionItems(retro.id, newRetro.id);
 
         await refreshHomeView(userId, teamId);
       }

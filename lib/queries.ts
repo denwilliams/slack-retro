@@ -253,3 +253,14 @@ export async function markActionItemIncomplete(
   `;
   return result[0] as ActionItem | null;
 }
+
+export async function migrateIncompleteActionItems(
+  fromRetroId: string,
+  toRetroId: string
+): Promise<void> {
+  await sql`
+    UPDATE action_items
+    SET retro_id = ${toRetroId}
+    WHERE retro_id = ${fromRetroId} AND completed = false
+  `;
+}
