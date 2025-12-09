@@ -38,8 +38,12 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get("content-type") || "";
     let payload;
 
+    console.log("Content-Type:", contentType);
+    console.log("Body preview:", body.substring(0, 100));
+
     if (contentType.includes("application/x-www-form-urlencoded")) {
       // Interactive components (buttons, modals, etc.) send form-encoded data
+      console.log("Parsing as form-encoded");
       const params = new URLSearchParams(body);
       const payloadStr = params.get("payload");
       if (!payloadStr) {
@@ -48,6 +52,7 @@ export async function POST(request: NextRequest) {
       payload = JSON.parse(payloadStr);
     } else {
       // Event subscriptions send JSON directly
+      console.log("Parsing as JSON");
       payload = JSON.parse(body);
     }
 
