@@ -75,19 +75,15 @@ Install the app to your workspace and copy the **Bot User OAuth Token** and **Si
 Create a `.env.local` file in the root directory:
 
 ```env
-# Slack App Configuration
+# Slack App Configuration (Required)
 SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 SLACK_SIGNING_SECRET=your-signing-secret-here
-SLACK_APP_TOKEN=xapp-your-app-token-here
-SLACK_CLIENT_ID=your-client-id
-SLACK_CLIENT_SECRET=your-client-secret
 
-# Neon Database
+# Neon Database (Required)
 DATABASE_URL=postgresql://user:password@host/database?sslmode=require
-
-# Next.js
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+**Note**: You only need these 3 environment variables. Other variables like `SLACK_APP_TOKEN` (for Socket Mode), `SLACK_CLIENT_ID`, and `SLACK_CLIENT_SECRET` (for OAuth) are not needed for this implementation.
 
 ### 5. Initialize Database
 

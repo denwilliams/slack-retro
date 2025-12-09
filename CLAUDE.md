@@ -167,15 +167,16 @@ All Slack users can:
 
 ## Environment Variables
 
-### Required in Production
+### Required
+Only these 3 environment variables are needed:
 - `SLACK_BOT_TOKEN`: Bot User OAuth Token (starts with `xoxb-`)
 - `SLACK_SIGNING_SECRET`: For verifying requests from Slack
 - `DATABASE_URL`: Neon PostgreSQL connection string
 
-### Optional/Future
-- `SLACK_CLIENT_ID`: For OAuth flow (not currently implemented)
-- `SLACK_CLIENT_SECRET`: For OAuth flow (not currently implemented)
-- `SLACK_APP_TOKEN`: For Socket Mode (not currently used)
+### Not Used (No Need to Set)
+- `SLACK_APP_TOKEN`: Only needed for Socket Mode (we use HTTP endpoints)
+- `SLACK_CLIENT_ID`: Only needed for OAuth flow (not implemented)
+- `SLACK_CLIENT_SECRET`: Only needed for OAuth flow (not implemented)
 
 ## Deployment Checklist
 
