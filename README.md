@@ -1,28 +1,95 @@
-# slack-retro
-For running retrospectives in Slack.
+# Slack Retro
 
-For now it only supports a single team per Slack install and no privacy controls. Assumes that everyone with Slack access is permitted to access this and see contents. In the future we may add team control and privacy.
+A Slack app for running team retrospectives directly in Slack using the App Home tab.
 
-Provides a home page in Slack where each team member can add items, and remove or edit their OWN ITEMS ONLY.
+## Features
 
-Format for now is fixed to 3 columns that represent good, bad, and questions/sharing -> :) | :( | ?
+### Discussion Items
+- Add discussion items in three categories:
+  - 😊 **What went well** - Positive highlights from the sprint
+  - 😕 **What could be improved** - Areas needing attention
+  - ❓ **Questions / Discussion topics** - Items to talk about
+- Items are displayed vertically with author attribution
+- Users can only edit or delete their own items
+- Add button positioned at top for easy access
 
-I don't think Slack can have 3 columns, so it might have to be laid out vertically.
+### Action Items
+- Create action items with assigned responsibility
+- Mark items as complete/incomplete with a toggle button
+- Action items persist across retros (discussion items are cleared)
+- Track who's responsible for each action
 
-The "add discussion item" button should be at the top so you don't have to scroll down unless you need to. Discussion items should be tagged with whoever added it.
+### Retro Management
+- **Finish Retro** - Generates a markdown summary of all discussion and action items
+- **Past Retros** - View historical retro summaries with completion dates
+- One active retro per team at a time
 
-There should also be an "add action item" to add actions as discussion happens. Action items should be tagged with whoever is responsible for it.
+### Privacy & Access
+- Single team per Slack installation
+- No granular privacy controls (all team members can see all items)
+- Users can only modify their own discussion items
 
-Each action item should have a "mark complete" button so we can remove the done ones.
+## Tech Stack
 
-Finally when the retro is done there should be a finish retro button that summarises all the discussion topics that were included, plus any action items that were added or are still outstanding in a single chunk of text (simple markdown formatting) and save it to the database. After this is done then delete the discussion items but keep the action items.
+- **Frontend/Backend**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **Database**: Neon Serverless PostgreSQL
+- **Slack Integration**: Slack Web API
+- **Hosting**: Vercel
 
-There needs to be a "Past Retros" button to view past retros
+## Getting Started
 
-## Implementation Decisions
+See [SETUP.md](./SETUP.md) for detailed installation and deployment instructions.
 
-The project will be hosted on Vercel and should use Next.js
+### Quick Start
 
-The API should use Hono with their built in support for Next.js
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see `.env.example`)
+4. Initialize the database: `POST /api/init-db`
+5. Configure your Slack app with the event URLs
+6. Deploy to Vercel or run locally with `npm run dev`
 
-The database will be Neon serverless so use the required SDK for that.
+## Project Structure
+
+```
+slack-retro/
+├── app/
+│   ├── api/
+│   │   ├── init-db/         # Database initialization endpoint
+│   │   └── slack/events/    # Slack event handler
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── globals.css
+├── lib/
+│   ├── db.ts               # Database connection
+│   ├── queries.ts          # Database queries
+│   ├── slack-handlers.ts   # Slack event processing
+│   └── slack-ui.ts         # Slack UI builders
+├── types/
+│   └── index.ts           # TypeScript interfaces
+├── TODO.md                # Project roadmap
+├── SETUP.md              # Setup instructions
+└── CLAUDE.md             # Development notes for Claude
+```
+
+## Database Schema
+
+- **installations** - Slack workspace installations
+- **retrospectives** - Retro sessions (active/finished status)
+- **discussion_items** - Discussion topics by category
+- **action_items** - Action items with completion tracking
+
+## Future Enhancements
+
+- Multi-team support per Slack installation
+- Privacy controls and permissions
+- Customizable category names
+- Export to external formats
+- Reminder notifications for outstanding action items
+- Recurring retro scheduling
+
+## License
+
+ISC
