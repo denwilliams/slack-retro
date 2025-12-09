@@ -77,10 +77,10 @@ slack-retro/
 
 ## Database Schema
 
-- **installations** - Slack workspace installations
 - **retrospectives** - Retro sessions (active/finished status)
 - **discussion_items** - Discussion topics by category
 - **action_items** - Action items with completion tracking
+- **installations** - Reserved for future OAuth implementation (not currently used)
 
 ## Future Enhancements
 

@@ -33,8 +33,7 @@ export async function initDatabase() {
       status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'finished')),
       created_at TIMESTAMP DEFAULT NOW(),
       finished_at TIMESTAMP,
-      summary TEXT,
-      FOREIGN KEY (team_id) REFERENCES installations(team_id)
+      summary TEXT
     )
   `;
 

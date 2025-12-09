@@ -87,9 +87,10 @@ Next.js API route that:
 ## Database Schema Notes
 
 ### Foreign Key Constraints
-- `retrospectives.team_id` → `installations.team_id`
 - `discussion_items.retro_id` → `retrospectives.id` (CASCADE DELETE)
 - `action_items.retro_id` → `retrospectives.id` (CASCADE DELETE)
+
+**Note**: The `installations` table exists for future OAuth implementation but is not currently used. The app uses a single bot token from environment variables, so `retrospectives.team_id` is not constrained by a foreign key.
 
 ### Important: User Name Storage
 User names are denormalized and stored with items:
