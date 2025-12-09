@@ -26,40 +26,49 @@ npm install
 
 ### 3. Create Slack App
 
+#### Option A: Using App Manifest (Recommended)
+
+1. Go to [Slack API](https://api.slack.com/apps)
+2. Click "Create New App" → "From an app manifest"
+3. Select your workspace
+4. Copy the contents of `slack-manifest.yaml` from this repo
+5. Paste into the YAML tab
+6. **Important**: Replace `https://your-app-url.vercel.app` with your actual URL:
+   - For local dev with ngrok: `https://your-ngrok-id.ngrok.io`
+   - For production: `https://your-app.vercel.app`
+7. Click "Create" and review the permissions
+8. Go to "Install App" and install to your workspace
+9. Copy the **Bot User OAuth Token** and **Signing Secret**
+
+#### Option B: Manual Configuration
+
+If you prefer to configure manually:
+
 1. Go to [Slack API](https://api.slack.com/apps)
 2. Click "Create New App" → "From scratch"
 3. Name your app "Retro Bot" and select your workspace
-4. Configure the following:
 
-#### OAuth & Permissions
-
-Add these **Bot Token Scopes**:
+**OAuth & Permissions** - Add these Bot Token Scopes:
 - `app_mentions:read`
 - `chat:write`
 - `users:read`
 - `users:read.email`
 
-#### Event Subscriptions
-
+**Event Subscriptions:**
 1. Enable Events
 2. Request URL: `https://your-domain.com/api/slack/events`
-3. Subscribe to bot events:
-   - `app_home_opened`
-   - `app_mention`
+3. Subscribe to bot events: `app_home_opened`, `app_mention`
 
-#### Interactivity & Shortcuts
-
+**Interactivity & Shortcuts:**
 1. Enable Interactivity
 2. Request URL: `https://your-domain.com/api/slack/events`
 
-#### App Home
-
+**App Home:**
 1. Enable Home Tab
-2. Enable Messages Tab (optional)
+2. Disable Messages Tab (not needed)
 
-#### Install App
-
-Install the app to your workspace and copy the **Bot User OAuth Token**
+**Install App:**
+Install the app to your workspace and copy the **Bot User OAuth Token** and **Signing Secret**
 
 ### 4. Configure Environment Variables
 

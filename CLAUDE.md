@@ -100,6 +100,8 @@ This is intentional to avoid extra Slack API calls when displaying items.
 
 ## Slack App Configuration Required
 
+**Quick Setup**: Use `slack-manifest.yaml` to create the app with all settings pre-configured. Just update the request URLs before creating the app.
+
 ### OAuth Scopes
 - `app_mentions:read`
 - `chat:write`
@@ -133,9 +135,16 @@ All buttons, modals, and interactions use the same endpoint: `/api/slack/events`
 
 ### Testing Locally with Slack
 1. Use ngrok: `ngrok http 3000`
-2. Update Slack app URLs with ngrok URL
+2. Update Slack app URLs with ngrok URL (or update manifest and reinstall)
 3. Run `npm run dev`
 4. Check ngrok web interface for request details
+
+### Updating Slack App Manifest
+When adding new OAuth scopes or event subscriptions:
+1. Update `slack-manifest.yaml` with the new configuration
+2. Go to your Slack app settings → App Manifest
+3. Paste the updated YAML and save
+4. Reinstall the app to your workspace if permissions changed
 
 ## Known Limitations
 

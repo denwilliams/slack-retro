@@ -46,9 +46,9 @@ See [SETUP.md](./SETUP.md) for detailed installation and deployment instructions
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Set up environment variables (see `.env.example`)
-4. Initialize the database: `POST /api/init-db`
-5. Configure your Slack app with the event URLs
+3. Create Slack app using `slack-manifest.yaml` (see [SETUP.md](./SETUP.md))
+4. Set up environment variables (see `.env.example`)
+5. Initialize the database: `POST /api/init-db`
 6. Deploy to Vercel or run locally with `npm run dev`
 
 ## Project Structure
@@ -68,10 +68,11 @@ slack-retro/
 │   ├── slack-handlers.ts   # Slack event processing
 │   └── slack-ui.ts         # Slack UI builders
 ├── types/
-│   └── index.ts           # TypeScript interfaces
-├── TODO.md                # Project roadmap
-├── SETUP.md              # Setup instructions
-└── CLAUDE.md             # Development notes for Claude
+│   └── index.ts            # TypeScript interfaces
+├── slack-manifest.yaml     # Slack app configuration
+├── TODO.md                 # Project roadmap
+├── SETUP.md                # Setup instructions
+└── CLAUDE.md               # Development notes for Claude
 ```
 
 ## Database Schema
