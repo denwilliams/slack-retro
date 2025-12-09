@@ -111,6 +111,11 @@ export async function processSlackEvent(payload: any) {
         });
       }
 
+      // Handle "Refresh" button
+      else if (action.action_id === "refresh_home") {
+        await refreshHomeView(userId, teamId);
+      }
+
       // Handle "View Past Retros" button
       else if (action.action_id === "view_past_retros") {
         const retros = await getPastRetros(teamId);

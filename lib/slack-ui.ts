@@ -69,6 +69,15 @@ export function buildHomeView(
           type: "button",
           text: {
             type: "plain_text",
+            text: "🔄 Refresh",
+            emoji: true,
+          },
+          action_id: "refresh_home",
+        },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
             text: "📋 Past Retros",
             emoji: true,
           },
