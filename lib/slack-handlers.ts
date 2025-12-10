@@ -89,6 +89,30 @@ export async function processSlackEvent(payload: any) {
       }
     }
 
+    // Handle message shortcuts (context menu actions)
+    if (payload.type === "message_action") {
+      console.log("[processSlackEvent] Message action:", payload.callback_id);
+
+      if (payload.callback_id === "add_message_to_retro") {
+        const messageText = payload.message.text;
+        const messageUser = payload.message.user;
+        const messageLink = payload.message_link;
+
+        // Build a formatted message with author attribution and link
+        let initialContent = messageText;
+        if (messageUser && messageLink) {
+          initialContent = `From <@${messageUser}>: ${messageText}\n\n${messageLink}`;
+        } else if (messageUser) {
+          initialContent = `From <@${messageUser}>: ${messageText}`;
+        }
+
+        await getSlackClient().views.open({
+          trigger_id: payload.trigger_id,
+          view: buildAddDiscussionItemModal(initialContent) as any,
+        });
+      }
+    }
+
     // Handle interactivity (button clicks, modal submissions, etc.)
     if (payload.type === "block_actions") {
       const action = payload.actions[0];

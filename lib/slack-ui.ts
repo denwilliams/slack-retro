@@ -231,7 +231,22 @@ export function buildHomeView(
   };
 }
 
-export function buildAddDiscussionItemModal() {
+export function buildAddDiscussionItemModal(initialContent?: string) {
+  const contentElement: any = {
+    type: "plain_text_input",
+    action_id: "content_input",
+    multiline: true,
+    placeholder: {
+      type: "plain_text",
+      text: "What would you like to discuss?",
+    },
+  };
+
+  // Add initial_value if content is provided
+  if (initialContent) {
+    contentElement.initial_value = initialContent;
+  }
+
   return {
     type: "modal" as const,
     callback_id: "add_discussion_item_modal",
@@ -297,15 +312,7 @@ export function buildAddDiscussionItemModal() {
       {
         type: "input",
         block_id: "content_block",
-        element: {
-          type: "plain_text_input",
-          action_id: "content_input",
-          multiline: true,
-          placeholder: {
-            type: "plain_text",
-            text: "What would you like to discuss?",
-          },
-        },
+        element: contentElement,
         label: {
           type: "plain_text",
           text: "Your thoughts",
