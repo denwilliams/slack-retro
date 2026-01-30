@@ -13,6 +13,24 @@ const CATEGORY_LABELS = {
   question: "Questions / Discussion topics",
 } as const;
 
+/**
+ * Converts standard markdown to Slack's mrkdwn format
+ * Slack doesn't support # headers, so we convert them to bold text
+ */
+function convertMarkdownToSlackFormat(text: string): string {
+  let result = text;
+
+  // Convert markdown headers to bold text with newlines
+  // ### Header 3 -> *Header 3*
+  result = result.replace(/^### (.+)$/gm, "*$1*");
+  // ## Header 2 -> *Header 2* (with more emphasis)
+  result = result.replace(/^## (.+)$/gm, "*$1*\n");
+  // # Header 1 -> *Header 1* (with more emphasis)
+  result = result.replace(/^# (.+)$/gm, "*$1*\n");
+
+  return result;
+}
+
 export function buildHomeView(
   discussionItems: DiscussionItem[],
   actionItems: ActionItem[],
@@ -619,13 +637,46 @@ export function buildViewInstructionsModal(instructions?: string) {
       },
     });
   } else {
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: instructions,
-      },
-    });
+    // Convert standard markdown to Slack's mrkdwn format
+    const slackFormattedText = convertMarkdownToSlackFormat(instructions);
+
+    // Split content into chunks to avoid 3000 character limit per block
+    // Also helps with better markdown rendering
+    const maxChunkSize = 2800; // Leave some buffer
+    const lines = slackFormattedText.split("\n");
+    let currentChunk = "";
+
+    for (const line of lines) {
+      const potentialChunk = currentChunk + (currentChunk ? "\n" : "") + line;
+
+      if (potentialChunk.length > maxChunkSize) {
+        // Add current chunk as a block
+        if (currentChunk) {
+          blocks.push({
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: currentChunk,
+            },
+          });
+        }
+        // Start new chunk with current line
+        currentChunk = line;
+      } else {
+        currentChunk = potentialChunk;
+      }
+    }
+
+    // Add remaining chunk
+    if (currentChunk) {
+      blocks.push({
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: currentChunk,
+        },
+      });
+    }
   }
 
   return {
