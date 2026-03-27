@@ -1,0 +1,60 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.9/schema.json",
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "error",
+					"options": {
+						"maxAllowedComplexity": 15
+					}
+				}
+			},
+			"correctness": {
+				"noUnusedImports": "error"
+			},
+			"style": {
+				"noDefaultExport": "error"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["src/routeTree.gen.ts"],
+			"assist": { "enabled": false },
+			"formatter": { "enabled": false },
+			"linter": { "enabled": false }
+		},
+		{
+			"includes": ["vite.config.ts", "drizzle.config.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noDefaultExport": "off",
+						"noNonNullAssertion": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["server/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noDefaultExport": "off"
+					}
+				}
+			}
+		}
+	],
+	"files": {
+		"includes": ["src/**", "server/**", "*.ts", "*.json"]
+	}
+}

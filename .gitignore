@@ -40,6 +40,7 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
+.output
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
@@ -74,9 +75,9 @@ web_modules/
 .cache
 .parcel-cache
 
-# Next.js build output
-.next
-out
+# Vite / Nitro build output
+.vite/
+.nitro/
 
 # Nuxt.js build / generate output
 .nuxt

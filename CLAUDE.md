@@ -4,231 +4,209 @@ This document contains important context for Claude Code sessions working on thi
 
 ## Project Overview
 
-This is a Slack App for running team retrospectives. Users interact with the app through the Slack App Home tab, where they can add discussion items, create action items, and view past retros.
+This is a Slack App for running team retrospectives. Users interact with the app through the Slack App Home tab, where they can add discussion items, create action items, and view past retros. A browser view is also available via an authenticated link from Slack.
 
-## Architecture Decisions
+## Tech Stack
+
+- **Runtime**: Bun
+- **Framework**: TanStack Start (Vite + Nitro)
+- **Language**: TypeScript (strict mode)
+- **ORM**: Drizzle ORM with `bun:sql` (Bun's built-in PostgreSQL driver)
+- **Database**: PostgreSQL
+- **Real-time**: Upstash Redis (HTTP-based polling) + Server-Sent Events
+- **Styling**: Tailwind CSS v4
+- **Linting**: Biome
+- **Slack**: `@slack/web-api` WebClient (no Bolt)
+
+## Commands
+
+- `bun install` — Install dependencies
+- `bun run dev` — Start dev server on port 3000
+- `bun run build` — Production build (outputs to `.output/`)
+- `bun run start` — Run production build
+- `bun test` — Run tests
+- `bun run lint` — Lint with Biome
+- `bun run typecheck` — TypeScript check
+- `bun run db:generate` — Generate Drizzle migrations
+- `bun run db:migrate` — Run Drizzle migrations
+- `bun run db:studio` — Open Drizzle Studio
+
+## Architecture
+
+### Two Route Systems
+
+**Page routes** (`src/routes/`) — TanStack Router file-based routing for React pages:
+- `__root.tsx` — HTML shell, Tailwind import, `<Outlet />`
+- `index.tsx` — Landing page (`/`)
+- `retro.tsx` — Retro board (`/retro`) with SSE live updates
+
+**API routes** (`server/routes/api/`) — Nitro server routes with method-based file naming:
+- `slack/events.post.ts` — Slack webhook endpoint
+- `auth/browser.get.ts` — Browser auth (token → session cookie → redirect)
+- `sse.get.ts` — Server-Sent Events for real-time updates
+- `retro.get.ts` — GET active retro + items
+- `discussion-items.{post,patch,delete}.ts` — Discussion item CRUD
+- `action-items.{post,patch}.ts` — Action item create/toggle
+- `init-db.post.ts` — Database connection check
+- `db-health.get.ts` — Table health check
+
+### Why Not `createAPIFileRoute`?
+
+TanStack Start v1 does not export `createAPIFileRoute`. All API routes use Nitro's native `defineHandler` from `nitro/h3` in `server/routes/`. Nitro auto-discovers these routes with method-based file naming (e.g., `events.post.ts` handles POST).
 
 ### Why Not Slack Bolt?
 
-Originally attempted to use `@slack/bolt` but ran into issues with Next.js App Router integration:
-- Bolt's `receiver.requestListener` is private and not meant for external use
-- Custom event handler (`lib/slack-handlers.ts`) was implemented instead
+Bolt's `receiver.requestListener` is private and doesn't integrate well with custom server frameworks. Instead:
 - Direct use of `@slack/web-api` WebClient for API calls
-- Manual request verification using HMAC SHA256
+- Manual request verification using HMAC SHA256 (`Bun.CryptoHasher`)
+- Custom event handler in `src/server/slack/handlers.ts`
 
 ### Database Connection Pattern
 
-The database connection in `lib/db.ts` uses a placeholder pattern to allow builds without DATABASE_URL:
+The database connection in `src/server/db/index.ts` uses a placeholder to allow builds without DATABASE_URL:
 ```typescript
 const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost/dbname";
+export const db = drizzle({ connection: DATABASE_URL, schema });
 ```
-
-This is intentional to allow Next.js builds to complete without throwing errors during static page generation. Runtime validation occurs when the database is actually used.
 
 ### Slack Client Initialization
 
-In `lib/slack-handlers.ts`, the Slack client uses lazy initialization:
-```typescript
-function getSlackClient() {
-  if (!client) {
-    client = getClient();
-  }
-  return client;
-}
-```
+In `src/server/slack/handlers.ts`, the Slack client uses lazy initialization to prevent errors during build time when SLACK_BOT_TOKEN isn't available.
 
-This prevents errors during build time when SLACK_BOT_TOKEN isn't available.
+### Auth Flow
 
-### TypeScript Type Casting
+1. User clicks "Open in Browser" in Slack App Home
+2. Handler generates a signed HMAC token (5-minute expiry)
+3. Modal shows a link to `/api/auth/browser?token=...`
+4. Browser auth route verifies token, creates session cookie (4-hour expiry), redirects to `/retro`
+5. All browser API routes authenticate via the `retro_session` cookie
 
-Slack UI builders in `lib/slack-ui.ts` use `as const` for modal types and `as any` when passing to the API:
-```typescript
-return {
-  type: "modal" as const,
-  // ...
-}
+### Real-Time Updates (SSE)
 
-await client.views.open({
-  view: buildAddDiscussionItemModal() as any,
-});
-```
-
-This is necessary because Slack's TypeScript types are very strict and the runtime accepts more flexibility than the types suggest.
+- Mutations in both Slack handlers and browser API routes call `publishEvent()` from `src/server/redis.ts`
+- Events are stored in Redis lists per team (`retro:events:${teamId}`)
+- SSE endpoint (`server/routes/api/sse.get.ts`) polls Redis every 2 seconds for new events
+- Browser clients use `useSSE()` hook (`src/lib/use-sse.ts`) with auto-reconnect and exponential backoff
+- Falls back gracefully when Redis is not configured (no real-time, manual refresh still works)
 
 ## Key Files
 
-### `lib/slack-handlers.ts`
-Processes all Slack events and interactivity. Main event types:
-- `event_callback` → `app_home_opened`: Refresh home view
-- `block_actions`: Handle button clicks
-- `view_submission`: Handle modal form submissions
+### `src/server/db/schema.ts`
+Drizzle schema defining 5 tables: `installations`, `retrospectives`, `discussionItems`, `actionItems`, `teamSettings`. Exports inferred types via `InferSelectModel`/`InferInsertModel`.
 
-### `lib/slack-ui.ts`
-Builds Slack Block Kit UI structures:
-- `buildHomeView()`: Main App Home interface
-- `buildAddDiscussionItemModal()`: Modal for adding discussion items
-- `buildAddActionItemModal()`: Modal for adding action items
-- `buildPastRetrosModal()`: Modal showing historical retros
-- `generateRetroSummary()`: Creates markdown summary
+### `src/server/db/queries.ts`
+All 19 database query functions using Drizzle query builder. Exact same function signatures as the original raw SQL queries.
 
-### `lib/queries.ts`
-All database queries using Neon's serverless PostgreSQL client. Uses tagged template literals for SQL queries:
-```typescript
-await sql`SELECT * FROM retrospectives WHERE team_id = ${teamId}`
-```
+### `src/server/auth.ts`
+HMAC-SHA256 token auth using `Bun.CryptoHasher`. Functions: `generateAuthToken`, `verifyAuthToken`, `generateSessionToken`, `verifySessionToken`, `getSessionFromCookieHeader`.
 
-### `app/api/slack/events/route.ts`
-Next.js API route that:
-1. Verifies Slack request signatures
-2. Handles URL verification challenges
-3. Processes events asynchronously with `setImmediate()`
-4. Returns immediate acknowledgment to Slack
+### `src/server/slack/handlers.ts`
+Processes all Slack events. Split into handler functions to keep cognitive complexity under 15 (Biome rule). Main export: `processSlackEvent(payload)`.
 
-## Database Schema Notes
+### `src/server/slack/ui.ts`
+Pure functions that return Slack Block Kit JSON. All UI builders including markdown-to-rich-text conversion.
 
-### Foreign Key Constraints
-- `discussion_items.retro_id` → `retrospectives.id` (CASCADE DELETE)
-- `action_items.retro_id` → `retrospectives.id` (CASCADE DELETE)
+### `src/server/redis.ts`
+Upstash Redis client with lazy initialization. Exports `publishEvent()` (fire-and-forget) and `getRecentEvents()` (for SSE polling).
 
-**Note**: The `installations` table exists for future OAuth implementation but is not currently used. The app uses a single bot token from environment variables, so `retrospectives.team_id` is not constrained by a foreign key.
+## Database Schema
 
-### Important: User Name Storage
-User names are denormalized and stored with items:
-- `discussion_items.user_name`
-- `action_items.responsible_user_name`
+### Tables
+- **installations** — Slack workspace info (future OAuth)
+- **retrospectives** — Retro sessions with active/finished status
+- **discussion_items** — Discussion topics by category (good/bad/question), FK → retrospectives (CASCADE DELETE)
+- **action_items** — Assigned tasks with completion tracking, FK → retrospectives (CASCADE DELETE)
+- **team_settings** — Per-team configuration (retro instructions)
 
-This is intentional to avoid extra Slack API calls when displaying items.
+### User Name Storage
+User names are denormalized on `discussion_items.user_name` and `action_items.responsible_user_name`. This avoids extra Slack API calls when displaying items.
 
-## Slack App Configuration Required
+## Slack App Configuration
 
-**Quick Setup**: Use `slack-manifest.yaml` to create the app with all settings pre-configured. Just update the request URLs before creating the app.
+**Quick Setup**: Use `slack-manifest.yaml` to create the app with all settings pre-configured.
 
 ### OAuth Scopes
-- `app_mentions:read`
-- `chat:write`
-- `users:read`
-- `users:read.email`
+`app_mentions:read`, `chat:write`, `users:read`, `users:read.email`
 
 ### Event Subscriptions
-- `app_home_opened`
-- `app_mention`
+`app_home_opened`, `app_mention`
 
 ### Interactivity
 All buttons, modals, and interactions use the same endpoint: `/api/slack/events`
 
-### App Home
-- Home tab must be enabled
-- No messages tab needed
-
 ## Common Development Tasks
 
 ### Adding a New Modal
-1. Create builder function in `lib/slack-ui.ts` with `type: "modal" as const`
-2. Add handler in `lib/slack-handlers.ts` for the button action
+1. Create builder function in `src/server/slack/ui.ts` with `type: "modal" as const`
+2. Add handler in `src/server/slack/handlers.ts` for the button action
 3. Add view submission handler for the modal's `callback_id`
 4. Call `refreshHomeView()` after processing to update the UI
+5. Add `publishEvent()` call if the action mutates data
 
 ### Adding a New Database Table
-1. Add TypeScript interface to `types/index.ts`
-2. Add CREATE TABLE statement to `lib/db.ts` → `initDatabase()`
-3. Add query functions to `lib/queries.ts`
-4. Users must call `/api/init-db` again after deploying schema changes
+1. Add table definition to `src/server/db/schema.ts` using `pgTable()`
+2. Export inferred types (`InferSelectModel`, `InferInsertModel`)
+3. Re-export types from `src/types/index.ts`
+4. Add query functions to `src/server/db/queries.ts`
+5. Run `bun run db:generate` then `bun run db:migrate`
+
+### Adding a New API Route
+Create a file in `server/routes/api/` with method suffix (e.g., `my-route.get.ts`):
+```typescript
+import { defineHandler, getRequestHeader } from "nitro/h3";
+import { getSessionFromCookieHeader } from "@/server/auth";
+
+export default defineHandler(async (event) => {
+  const session = getSessionFromCookieHeader(getRequestHeader(event, "cookie") ?? null);
+  if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  // ... route logic
+  return { data: "..." };
+});
+```
 
 ### Testing Locally with Slack
 1. Use ngrok: `ngrok http 3000`
-2. Update Slack app URLs with ngrok URL (or update manifest and reinstall)
-3. Run `npm run dev`
+2. Update Slack app URLs with ngrok URL
+3. Run `bun run dev`
 4. Check ngrok web interface for request details
-
-### Updating Slack App Manifest
-When adding new OAuth scopes or event subscriptions:
-1. Update `slack-manifest.yaml` with the new configuration
-2. Go to your Slack app settings → App Manifest
-3. Paste the updated YAML and save
-4. Reinstall the app to your workspace if permissions changed
-
-## Known Limitations
-
-### Single Team Support
-The app currently supports one active retro per team. To support multiple teams:
-- Would need to remove the UNIQUE constraint on `installations.team_id`
-- Add proper OAuth flow for multi-workspace installations
-- Update queries to filter by specific installation
-
-### No Authentication
-All Slack users can:
-- See all discussion items and action items
-- Mark any action item complete/incomplete
-- Only restriction: users can only edit/delete their own discussion items
-
-### Action Item Filtering
-`getActionItems()` only returns incomplete items. `getAllActionItems()` returns everything. This is used to:
-- Show only active items in the home view
-- Include completed items in the final summary
 
 ## Environment Variables
 
 ### Required
-Only these 3 environment variables are needed:
-- `SLACK_BOT_TOKEN`: Bot User OAuth Token (starts with `xoxb-`)
-- `SLACK_SIGNING_SECRET`: For verifying requests from Slack
-- `DATABASE_URL`: Neon PostgreSQL connection string
+- `DATABASE_URL` — PostgreSQL connection string
+- `SLACK_BOT_TOKEN` — Bot User OAuth Token (`xoxb-...`)
+- `SLACK_SIGNING_SECRET` — For verifying requests from Slack
 
-### Not Used (No Need to Set)
-- `SLACK_APP_TOKEN`: Only needed for Socket Mode (we use HTTP endpoints)
-- `SLACK_CLIENT_ID`: Only needed for OAuth flow (not implemented)
-- `SLACK_CLIENT_SECRET`: Only needed for OAuth flow (not implemented)
+### Optional
+- `AUTH_SECRET` — For browser auth tokens (defaults to `SLACK_SIGNING_SECRET`)
+- `UPSTASH_REDIS_REST_URL` — For real-time updates
+- `UPSTASH_REDIS_REST_TOKEN` — For real-time updates
+- `BASE_URL` — Override base URL (defaults to `VERCEL_URL` or `localhost:3000`)
 
-## Deployment Checklist
+## Code Style
 
-1. Create Neon database and get connection string
-2. Create Slack app and configure all settings
-3. Set environment variables in Vercel
-4. Deploy to Vercel
-5. Update Slack app Request URLs with Vercel deployment URL
-6. Run database initialization: `curl -X POST https://your-app.vercel.app/api/init-db`
-7. Install app to Slack workspace
-8. Test by opening App Home in Slack
+- Biome enforced: tabs, 100 line width, `noDefaultExport` (exempted for route files)
+- Named exports only (no default exports except Nitro route handlers)
+- `async/await` for all async operations
+- Error handling: Log errors but don't throw in Slack handlers (Slack expects 200 OK)
+- Cognitive complexity limit: 15 per function
+- Types inferred from Drizzle schema, re-exported from `src/types/index.ts`
 
 ## Troubleshooting
 
 ### "Invalid signature" errors
-- Check SLACK_SIGNING_SECRET is correct
-- Verify timestamp isn't too old (Slack rejects requests >5 minutes old)
-- Check request is coming from Slack (not a browser refresh)
+- Check `SLACK_SIGNING_SECRET` is correct
+- Verify timestamp isn't too old (Slack rejects >5 minutes)
 
 ### Database connection errors at build time
-- This is expected! The placeholder connection string allows builds to complete
-- Real validation happens at runtime when database is accessed
-- Ensure DATABASE_URL is set in production environment
+- Expected — the placeholder connection string allows builds to complete
+- Real validation happens at runtime
 
 ### Home view not updating
 - Check that `refreshHomeView()` is called after data changes
-- Verify user_id and team_id are correctly extracted from payload
-- Look for errors in Vercel logs or console
+- Verify `user_id` and `team_id` are correctly extracted from payload
 
-### Modals not opening
-- Verify `trigger_id` is passed correctly (it expires after 3 seconds)
-- Check that the action handler calls `client.views.open()`
-- Ensure modal builder returns proper structure with `type: "modal" as const`
-
-## Code Style Notes
-
-- Use `async/await` for all database and Slack API calls
-- Error handling: Log errors but don't throw (Slack expects 200 OK)
-- Use template literals for SQL queries with `sql` tag
-- Export typed interfaces from `types/index.ts`
-- Keep UI builders pure functions in `lib/slack-ui.ts`
-
-## Future Improvements to Consider
-
-1. **OAuth Flow**: Implement proper installation flow instead of manual token setup
-2. **Multi-workspace**: Support installing to multiple Slack workspaces
-3. **Recurring Retros**: Auto-create new retros on schedule
-4. **Notifications**: Remind users about outstanding action items
-5. **Customization**: Allow teams to customize category names
-6. **Export**: Add CSV/JSON export for retro data
-7. **Analytics**: Track retro participation and action item completion rates
-8. **Threads**: Support threaded discussions on items
-9. **Voting**: Let team members vote on discussion items
-10. **Templates**: Pre-defined retro formats beyond the 3-category structure
+### SSE not working
+- Check Redis env vars are set
+- SSE falls back to no real-time when Redis is unavailable
+- Check browser console for EventSource connection errors
